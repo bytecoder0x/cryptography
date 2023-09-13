@@ -9,3 +9,4 @@ include_directories(${CMAKE_SOURCE_DIR} ${Boost_INCLUDE_DIRS})
 
 add_executable(vigenere classical/vigenere.cpp)
 add_executable(euclid number-theory/euclid.cpp)
+add_executable(miller-rabin number-theory/miller-rabin.cpp)
