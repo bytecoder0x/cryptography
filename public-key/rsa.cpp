@@ -5,6 +5,7 @@
 #include "common/hex.h"
 #include "common/modular.h"
 #include "common/prime.h"
+#include "hash/sha256.h"
 
 using namespace std;
 
@@ -37,6 +38,17 @@ BigInt decrypt(const BigInt& ciphertext, const RsaKey& key) {
     return modpow(ciphertext, key.d, key.n);
 }
 
+// textbook signature without padding: hash^d mod n
+BigInt signMessage(const string& message, const RsaKey& key) {
+    BigInt hash = bytesToBigInt(sha256(toBytes(message)));
+    return modpow(hash, key.d, key.n);
+}
+
+bool verifySignature(const string& message, const BigInt& signature, const RsaKey& key) {
+    BigInt hash = bytesToBigInt(sha256(toBytes(message)));
+    return modpow(signature, key.e, key.n) == hash;
+}
+
 int main() {
     RsaKey key = generateKey(1024);
     cout << "n = " << key.n << endl;
@@ -48,5 +60,10 @@ int main() {
     cout << "message = " << message << endl;
     cout << "ciphertext = " << ciphertext << endl;
     cout << "decrypted = " << decrypt(ciphertext, key) << endl;
+
+    string text = "hello rsa";
+    BigInt signature = signMessage(text, key);
+    cout << "signature = " << signature << endl;
+    cout << "verify = " << verifySignature(text, signature, key) << endl;
     return 0;
 }
