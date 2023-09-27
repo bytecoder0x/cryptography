@@ -15,9 +15,24 @@ struct RsaKey {
     BigInt d;
 };
 
+bool failed = false;
+
+void check(const string& name, bool ok) {
+    cout << "check " << name << ": " << (ok ? "OK" : "FAIL") << endl;
+
+    if (!ok) {
+        failed = true;
+    }
+}
+
+string toHex(const BigInt& value, size_t length) {
+    return toHex(bigIntToBytes(value, length));
+}
+
 RsaKey generateKey(int bits) {
     RsaKey key;
     key.e = 65537;
+
     while (true) {
         BigInt p = randomPrime(bits / 2);
         BigInt q = randomPrime(bits / 2);
@@ -50,20 +65,36 @@ bool verifySignature(const string& message, const BigInt& signature, const RsaKe
 }
 
 int main() {
+    cout << "rsa" << endl;
+
     RsaKey key = generateKey(1024);
-    cout << "n = " << key.n << endl;
-    cout << "e = " << key.e << endl;
-    cout << "d = " << key.d << endl;
+    cout << "key size: 1024 bits" << endl;
+    cout << "n: " << toHex(key.n, 128) << endl;
+    cout << "e: " << key.e << endl;
+    cout << "d: " << toHex(key.d, 128) << endl;
 
     BigInt message = 123456789;
     BigInt ciphertext = encrypt(message, key);
-    cout << "message = " << message << endl;
-    cout << "ciphertext = " << ciphertext << endl;
-    cout << "decrypted = " << decrypt(ciphertext, key) << endl;
+    BigInt decrypted = decrypt(ciphertext, key);
+    cout << "message: " << message << endl;
+    cout << "ciphertext: " << toHex(ciphertext, 128) << endl;
+    cout << "decrypted: " << decrypted << endl;
 
     string text = "hello rsa";
     BigInt signature = signMessage(text, key);
-    cout << "signature = " << signature << endl;
-    cout << "verify = " << verifySignature(text, signature, key) << endl;
-    return 0;
+    cout << "signed text: " << text << endl;
+    cout << "sha256: " << toHex(sha256(toBytes(text))) << endl;
+    cout << "signature: " << toHex(signature, 128) << endl;
+    cout << "verify: " << (verifySignature(text, signature, key) ? "true" : "false") << endl;
+
+    RsaKey small;
+    small.n = 61 * 53;
+    small.e = 17;
+    small.d = modinv(small.e, 60 * 52);
+    check("small example p=61 q=53",
+          small.n == 3233 && small.d == 2753 && encrypt(65, small) == 2790 && decrypt(2790, small) == 65);
+    check("roundtrip 1024 bit", decrypted == message);
+    check("sign/verify", verifySignature(text, signature, key));
+
+    return failed ? 1 : 0;
 }
