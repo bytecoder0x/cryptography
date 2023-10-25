@@ -24,5 +24,10 @@ int main() {
     MerkleTree tree(leaves);
 
     cout << "root = " << toHex(tree.root()) << endl;
+    vector<Bytes> proof = tree.proof(3);
+    for (size_t i = 0; i < proof.size(); i++) {
+        cout << "proof[" << i << "] = " << toHex(proof[i]) << endl;
+    }
+    cout << "verify = " << (MerkleTree::verify(leaves[3], proof, tree.root()) ? "true" : "false") << endl;
     return 0;
 }

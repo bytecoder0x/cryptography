@@ -44,6 +44,26 @@ public:
         return levels.back()[0];
     }
 
+    std::vector<Bytes> proof(size_t index) const {
+        std::vector<Bytes> result;
+        for (size_t level = 0; level + 1 < levels.size(); level++) {
+            size_t sibling = index ^ 1;
+            if (sibling < levels[level].size()) {
+                result.push_back(levels[level][sibling]);
+            }
+            index /= 2;
+        }
+        return result;
+    }
+
+    static bool verify(const Bytes& leaf, const std::vector<Bytes>& proof, const Bytes& root) {
+        Bytes computed = leaf;
+        for (size_t i = 0; i < proof.size(); i++) {
+            computed = hashPair(computed, proof[i]);
+        }
+        return computed == root;
+    }
+
 private:
     std::vector<std::vector<Bytes>> levels;
 };
