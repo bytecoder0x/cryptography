@@ -8,6 +8,21 @@
 
 using namespace std;
 
+bool failed = false;
+
+void check(const string& name, bool ok) {
+    cout << "check " << name << ": " << (ok ? "OK" : "FAIL") << endl;
+
+    if (!ok) {
+        failed = true;
+    }
+}
+
+// leaf is keccak256 of the 20 address bytes, like in solidity
+Bytes addressLeaf(const string& address) {
+    return keccak256(fromHex(address));
+}
+
 int main() {
     vector<string> allowlist = {
         "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -18,16 +33,30 @@ int main() {
     };
 
     vector<Bytes> leaves;
+
     for (size_t i = 0; i < allowlist.size(); i++) {
-        leaves.push_back(keccak256(fromHex(allowlist[i])));
+        leaves.push_back(addressLeaf(allowlist[i]));
     }
     MerkleTree tree(leaves);
 
-    cout << "root = " << toHex(tree.root()) << endl;
-    vector<Bytes> proof = tree.proof(3);
-    for (size_t i = 0; i < proof.size(); i++) {
-        cout << "proof[" << i << "] = " << toHex(proof[i]) << endl;
+    cout << "merkle tree" << endl;
+
+    for (size_t i = 0; i < allowlist.size(); i++) {
+        cout << "address " << i << ": " << allowlist[i] << endl;
     }
-    cout << "verify = " << (MerkleTree::verify(leaves[3], proof, tree.root()) ? "true" : "false") << endl;
-    return 0;
+    cout << "root: " << toHex(tree.root()) << endl;
+
+    size_t index = 3;
+    vector<Bytes> proof = tree.proof(index);
+    cout << "leaf " << index << ": " << toHex(leaves[index]) << endl;
+
+    for (size_t i = 0; i < proof.size(); i++) {
+        cout << "proof " << i << ": " << toHex(proof[i]) << endl;
+    }
+
+    check("proof for address 3", MerkleTree::verify(leaves[index], proof, tree.root()));
+    Bytes wrongLeaf = addressLeaf("0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc");
+    check("wrong address", !MerkleTree::verify(wrongLeaf, proof, tree.root()));
+
+    return failed ? 1 : 0;
 }
