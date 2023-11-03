@@ -24,6 +24,12 @@ const Point SECP256K1_G = {
     false
 };
 
+struct Signature {
+    BigInt r;
+    BigInt s;
+    int v;
+};
+
 inline BigInt modP(const BigInt& a) {
     return ((a % SECP256K1_P) + SECP256K1_P) % SECP256K1_P;
 }
@@ -74,6 +80,45 @@ inline BigInt generatePrivateKey() {
 
 inline Point publicKey(const BigInt& privateKey) {
     return scalarMul(privateKey, SECP256K1_G);
+}
+
+inline Signature sign(const Bytes& hash32, const BigInt& privateKey) {
+    const BigInt& n = SECP256K1_N;
+    BigInt z = bytesToBigInt(hash32);
+    Signature sig = {0, 0, 0};
+
+    while (true) {
+        BigInt k = randomBelow(n - 1) + 1;
+        Point point = scalarMul(k, SECP256K1_G);
+        sig.r = point.x % n;
+        sig.s = modinv(k, n) * (z + sig.r * privateKey) % n;
+        if (sig.r == 0 || sig.s == 0) {
+            continue;
+        }
+        sig.v = ((point.y & 1) == 1) ? 28 : 27;
+        if (sig.s > n / 2) {
+            sig.s = n - sig.s;
+            sig.v = (sig.v == 27) ? 28 : 27;
+        }
+        return sig;
+    }
+}
+
+inline bool verify(const Bytes& hash32, const Signature& sig, const Point& pub) {
+    const BigInt& n = SECP256K1_N;
+
+    if (sig.r < 1 || sig.r >= n || sig.s < 1 || sig.s >= n) {
+        return false;
+    }
+    BigInt z = bytesToBigInt(hash32);
+    BigInt w = modinv(sig.s, n);
+    Point point = pointAdd(scalarMul(z * w % n, SECP256K1_G), scalarMul(sig.r * w % n, pub));
+
+    if (point.infinity) {
+        return false;
+    }
+
+    return point.x % n == sig.r;
 }
 
 #endif
