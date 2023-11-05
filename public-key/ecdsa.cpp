@@ -17,6 +17,7 @@ int main() {
     Point pub = publicKey(privateKey);
     cout << "private key: " << toHex(privateKey, 32) << endl;
     cout << "public key: " << toHex(pub.x, 32) << toHex(pub.y, 32) << endl;
+    cout << "address: 0x" << toHex(ethereumAddress(pub)) << endl;
 
     Bytes hash = keccak256(toBytes("hello"));
     Signature sig = sign(hash, privateKey);
@@ -24,5 +25,6 @@ int main() {
     cout << "s: " << toHex(sig.s, 32) << endl;
     cout << "v: " << sig.v << endl;
     cout << "verify: " << verify(hash, sig, pub) << endl;
+    cout << "recovered address: 0x" << toHex(ethereumAddress(recover(hash, sig))) << endl;
     return 0;
 }

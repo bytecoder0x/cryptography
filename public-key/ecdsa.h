@@ -7,6 +7,7 @@
 #include "common/hex.h"
 #include "common/modular.h"
 #include "common/random.h"
+#include "hash/keccak256.h"
 
 const BigInt SECP256K1_P("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F");
 const BigInt SECP256K1_N("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
@@ -119,6 +120,38 @@ inline bool verify(const Bytes& hash32, const Signature& sig, const Point& pub) 
     }
 
     return point.x % n == sig.r;
+}
+
+inline Point recover(const Bytes& hash32, const Signature& sig) {
+    const BigInt& p = SECP256K1_P;
+    const BigInt& n = SECP256K1_N;
+    // R has x = r and y = sqrt(x^3 + 7); p % 4 == 3 so sqrt(a) = a^((p + 1) / 4), v picks the root
+    BigInt ySquared = (sig.r * sig.r * sig.r + SECP256K1_B) % p;
+    BigInt y = modpow(ySquared, (p + 1) / 4, p);
+
+    if (y * y % p != ySquared) {
+        return {0, 0, true};
+    }
+    bool wantOdd = (sig.v == 28);
+
+    if (((y & 1) == 1) != wantOdd) {
+        y = p - y;
+    }
+    Point rPoint = {sig.r, y, false};
+    BigInt z = bytesToBigInt(hash32);
+    // Q = r^-1 * (s*R - z*G)
+    Point sum = pointAdd(scalarMul(sig.s, rPoint), scalarMul((n - z % n) % n, SECP256K1_G));
+
+    return scalarMul(modinv(sig.r, n), sum);
+}
+
+inline Bytes ethereumAddress(const Point& pub) {
+    Bytes xy = bigIntToBytes(pub.x, 32);
+    Bytes y = bigIntToBytes(pub.y, 32);
+    xy.insert(xy.end(), y.begin(), y.end());
+    Bytes hash = keccak256(xy);
+
+    return Bytes(hash.begin() + 12, hash.end());
 }
 
 #endif
