@@ -7,6 +7,7 @@
 #include <string>
 
 #include "common/hex.h"
+#include "hash/sha256.h"
 
 inline std::string base58Encode(const Bytes& bytes) {
     const char* alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -69,6 +70,15 @@ inline Bytes base58Decode(const std::string& text) {
     result.insert(result.end(), body.begin(), body.end());
 
     return result;
+}
+
+inline std::string base58Check(const Bytes& payload) {
+    Bytes hash1 = sha256(payload);
+    Bytes hash2 = sha256(hash1);
+    Bytes data = payload;
+    data.insert(data.end(), hash2.begin(), hash2.begin() + 4);
+
+    return base58Encode(data);
 }
 
 #endif
