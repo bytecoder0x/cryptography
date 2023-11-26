@@ -21,3 +21,10 @@ Every file is a small demo that prints the result and checks it against known va
 
 Shared stuff is in `common/`: `BigInt` (boost cpp_int), modular arithmetic, Miller-Rabin, random numbers, hex.
 The `.h` is the algorithm, the `.cpp` with the same name is the demo.
+
+## Build
+
+```
+cmake -B build
+cmake --build build
+```
